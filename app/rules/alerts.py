@@ -1,0 +1,82 @@
+"""Alert generation logic based on pricing rules."""
+
+from __future__ import annotations
+
+from decimal import Decimal
+from typing import List, Optional, Tuple
+
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session
+
+from app.db import insert_alert
+from app.models import CompetitorPriceSnapshot, Listing, OwnPriceSnapshot
+
+
+def _latest_own_snapshot(session: Session, listing_id: int) -> Optional[OwnPriceSnapshot]:
+    stmt = (
+        select(OwnPriceSnapshot)
+        .where(OwnPriceSnapshot.listing_id == listing_id)
+        .order_by(desc(OwnPriceSnapshot.timestamp))
+        .limit(1)
+    )
+    result = session.execute(stmt).scalar_one_or_none()
+    return result
+
+
+def _latest_competitor_prices(session: Session, listing_id: int) -> Tuple[Optional[CompetitorPriceSnapshot], Optional[Decimal]]:
+    latest_ts_stmt = (
+        select(CompetitorPriceSnapshot.timestamp)
+        .where(CompetitorPriceSnapshot.listing_id == listing_id)
+        .order_by(desc(CompetitorPriceSnapshot.timestamp))
+        .limit(1)
+    )
+    latest_ts = session.execute(latest_ts_stmt).scalar_one_or_none()
+    if latest_ts is None:
+        return None, None
+
+    prices_stmt = (
+        select(CompetitorPriceSnapshot)
+        .where(
+            CompetitorPriceSnapshot.listing_id == listing_id,
+            CompetitorPriceSnapshot.timestamp == latest_ts,
+        )
+    )
+    snapshots = session.execute(prices_stmt).scalars().all()
+    if not snapshots:
+        return None, None
+    min_price = min(Decimal(str(s.precio)) for s in snapshots)
+    return snapshots[0], min_price
+
+
+def process_new_snapshots(session: Session) -> List[str]:
+    """
+    Generate alerts comparing own vs competitor latest prices.
+
+    If own price is >10% higher than the minimum competitor price for the same
+    listing in the latest run, create an alert with type 'gap_mayor_10'.
+    """
+
+    alerts_created: List[str] = []
+    listings = session.execute(select(Listing)).scalars().all()
+
+    for listing in listings:
+        own_snapshot = _latest_own_snapshot(session, listing.id)
+        competitor_snapshot, min_comp_price = _latest_competitor_prices(session, listing.id)
+        if not own_snapshot or min_comp_price is None:
+            continue
+
+        own_price = Decimal(str(own_snapshot.precio))
+        if min_comp_price == 0:
+            continue
+
+        gap = (own_price - min_comp_price) / min_comp_price
+        if gap > Decimal("0.10"):
+            detalle = (
+                f"Listing {listing.id} own price {own_price} vs min competitor {min_comp_price} "
+                f"gap {gap:.2%}"
+            )
+            insert_alert(session, listing_id=listing.id, tipo="gap_mayor_10", detalle=detalle)
+            alerts_created.append(detalle)
+
+    session.commit()
+    return alerts_created
