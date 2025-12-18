@@ -1,0 +1,56 @@
+default:
+  user_agent: "Mozilla/5.0 ..."
+  max_retries: 3
+  timeout: 30
+
+channels:
+  prochef:
+    type: web
+    own_price_mode: api
+    competitor_mode: none
+    api:
+      base_url: "https://api.prochef.cl"
+      env_keys:
+        token: "PROCHEF_API_TOKEN"
+
+  falabella:
+    type: marketplace
+    own_price_mode: api
+    competitor_mode: scraping
+    api:
+      base_url: "https://api.falabella.com/..."
+      auth_type: "token"
+      env_keys:
+        client_id: "FALABELLA_CLIENT_ID"
+        client_secret: "FALABELLA_CLIENT_SECRET"
+    scraping:
+      selector_price: "css=span.price"
+      selector_offers_block: "css=div.offers"
+      throttling:
+        min_delay: 2
+        max_delay: 5
+
+  ripley:
+    type: marketplace
+    own_price_mode: api
+    competitor_mode: scraping
+    api:
+      base_url: "https://api.ripley.cl/..."
+    scraping:
+      selector_price: "css=span.price"
+
+  paris:
+    type: marketplace
+    own_price_mode: export
+    competitor_mode: scraping
+    scraping:
+      selector_price: "css=span.price"
+
+  walmart:
+    type: marketplace
+    own_price_mode: api
+    competitor_mode: scraping
+    api:
+      base_url: "https://api.walmart.cl/..."
+    scraping:
+      selector_price: "css=span.price"
