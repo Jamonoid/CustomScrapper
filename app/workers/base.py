@@ -50,6 +50,8 @@ class BaseWorker(ABC):
     def _get_headless(self) -> bool:
         """Obtiene si el navegador debe ejecutarse en modo headless."""
 
+        if "headless" in self.channel_config:
+            return bool(self.channel_config.get("headless", True))
         scraping_cfg = self.channel_config.get("scraping", {})
         return bool(scraping_cfg.get("headless", True))
 
