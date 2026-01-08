@@ -1,5 +1,4 @@
 """Worker para el marketplace Walmart Chile."""
-
 from __future__ import annotations
 
 import asyncio

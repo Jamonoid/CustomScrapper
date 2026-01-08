@@ -1,5 +1,4 @@
 """Modelos SQLAlchemy para el servicio de monitoreo de precios."""
-
 from __future__ import annotations
 
 from datetime import datetime

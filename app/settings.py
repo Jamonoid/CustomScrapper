@@ -1,5 +1,4 @@
 """Configuración de la aplicación y carga de ajustes."""
-
 from __future__ import annotations
 
 import os

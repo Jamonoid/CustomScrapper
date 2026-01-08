@@ -1,5 +1,4 @@
 """Worker para el marketplace Paris."""
-
 from __future__ import annotations
 
 import asyncio

@@ -1,5 +1,3 @@
-"""Punto de entrada CLI para el monitoreo de precios."""
-
 from __future__ import annotations
 
 import argparse

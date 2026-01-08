@@ -1,5 +1,4 @@
 """Definición abstracta de worker para recolectores por canal."""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

@@ -1,5 +1,4 @@
 """Configuración de base de datos y funciones auxiliares."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta

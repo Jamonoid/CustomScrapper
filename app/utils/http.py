@@ -1,7 +1,5 @@
 """Utilidades HTTP para llamadas a APIs y scraping con Playwright."""
-
 from __future__ import annotations
-
 import asyncio
 import logging
 import random

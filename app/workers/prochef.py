@@ -1,5 +1,4 @@
 """Worker para el sitio propio de Prochef."""
-
 from __future__ import annotations
 
 import asyncio

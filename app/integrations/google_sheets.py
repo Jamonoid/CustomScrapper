@@ -1,5 +1,4 @@
 """Integración con Google Sheets para cargar watchlists y escribir alertas."""
-
 from __future__ import annotations
 
 import os

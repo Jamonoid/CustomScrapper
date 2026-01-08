@@ -1,5 +1,4 @@
 """Lógica de generación de alertas basada en reglas de precios."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
