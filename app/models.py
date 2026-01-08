@@ -1,4 +1,4 @@
-"""SQLAlchemy models for the price monitoring service."""
+"""Modelos SQLAlchemy para el servicio de monitoreo de precios."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ Base = declarative_base()
 
 
 class Product(Base):
-    """Represents an internal product."""
+    """Representa un producto interno."""
 
     __tablename__ = "products"
 
@@ -38,7 +38,7 @@ class Product(Base):
 
 
 class Channel(Base):
-    """Represents a sales or competitive channel."""
+    """Representa un canal de ventas o competitivo."""
 
     __tablename__ = "channels"
 
@@ -50,7 +50,7 @@ class Channel(Base):
 
 
 class Listing(Base):
-    """Associates an internal product with a channel-specific listing."""
+    """Asocia un producto interno con un listing específico por canal."""
 
     __tablename__ = "listings"
     __table_args__ = (
@@ -75,7 +75,7 @@ class Listing(Base):
 
 
 class OwnPriceSnapshot(Base):
-    """Stores price history for the owned listings."""
+    """Guarda el historial de precios para listings propios."""
 
     __tablename__ = "own_price_snapshots"
 
@@ -91,7 +91,7 @@ class OwnPriceSnapshot(Base):
 
 
 class CompetitorPriceSnapshot(Base):
-    """Stores competitor price history for monitored listings."""
+    """Guarda el historial de precios de competidores para listings monitoreados."""
 
     __tablename__ = "competitor_price_snapshots"
 
@@ -107,7 +107,7 @@ class CompetitorPriceSnapshot(Base):
 
 
 class Alert(Base):
-    """Represents pricing or scraping alerts to act upon."""
+    """Representa alertas de precio o scraping a gestionar."""
 
     __tablename__ = "alerts"
 

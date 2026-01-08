@@ -1,4 +1,4 @@
-"""HTTP utilities for API calls and Playwright scraping."""
+"""Utilidades HTTP para llamadas a APIs y scraping con Playwright."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def request_with_retries(
     timeout: int = 30,
     backoff_factor: float = 1.5,
 ) -> Response:
-    """Perform an HTTP request with simple retry logic."""
+    """Realiza una petición HTTP con lógica simple de reintentos."""
 
     for attempt in range(1, retries + 1):
         try:
@@ -58,7 +58,7 @@ def request_with_retries(
 
 
 async def _create_browser(user_agent: Optional[str] = None) -> tuple[Playwright, Browser]:
-    """Create a Playwright browser instance."""
+    """Crea una instancia de navegador de Playwright."""
 
     playwright = await async_playwright().start()
     browser = await playwright.chromium.launch(headless=True)
@@ -72,7 +72,7 @@ async def fetch_page_content(
     wait_selector: Optional[str] = None,
     timeout_ms: int = 30000,
 ) -> str:
-    """Fetch page content using Playwright with optional waiting."""
+    """Obtiene el contenido de una página con Playwright y espera opcional."""
 
     playwright: Optional[Playwright] = None
     browser: Optional[Browser] = None

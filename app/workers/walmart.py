@@ -1,4 +1,4 @@
-"""Worker for Walmart Chile marketplace."""
+"""Worker para el marketplace Walmart Chile."""
 
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ from .base import BaseWorker
 
 
 class WalmartWorker(BaseWorker):
-    """Handles Walmart API and competitor scraping."""
+    """Gestiona la API de Walmart y el scraping de competidores."""
 
     def fetch_own_prices(self, listings: List[Listing]) -> None:
         """
-        Placeholder for Walmart API pricing.
+        Marcador de posición para precios vía la API de Walmart.
 
-        Implement authentication using environment variables defined in the YAML
-        config, then call the pricing endpoint per listing and store results.
+        Implementa autenticación usando variables de entorno definidas en la
+        configuración YAML, luego llama al endpoint de precios por listing y guarda resultados.
         """
 
         api_cfg = self.channel_config.get("api", {})
@@ -39,7 +39,7 @@ class WalmartWorker(BaseWorker):
             )
 
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
-        """Scrape Walmart PDPs for competitor pricing."""
+        """Extrae precios de competidores desde PDPs de Walmart."""
 
         scraping_cfg = self.channel_config.get("scraping", {})
         selector_price = scraping_cfg.get("selector_price")
@@ -57,7 +57,7 @@ class WalmartWorker(BaseWorker):
                     self.db_session,
                     listing_id=listing.id,
                     competitor_name="walmart",
-                    precio=0,  # TODO: parse from HTML.
+                    precio=0,  # TODO: parsear desde el HTML.
                     stock=None,
                     extra={"raw_html_excerpt": content[:500]},
                 )

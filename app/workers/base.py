@@ -1,4 +1,4 @@
-"""Abstract worker definition for channel-specific collectors."""
+"""Definición abstracta de worker para recolectores por canal."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from app.models import Listing
 
 
 class BaseWorker(ABC):
-    """Base worker providing shared structure for channel implementations."""
+    """Worker base que provee estructura compartida para implementaciones por canal."""
 
     def __init__(self, channel_name: str, channel_config: Dict, db_session: Session) -> None:
         self.channel_name = channel_name
@@ -20,8 +20,8 @@ class BaseWorker(ABC):
 
     @abstractmethod
     def fetch_own_prices(self, listings: List[Listing]) -> None:
-        """Collect own prices for the given listings."""
+        """Recolecta precios propios para los listings indicados."""
 
     @abstractmethod
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
-        """Collect competitor prices for the given listings."""
+        """Recolecta precios de competidores para los listings indicados."""

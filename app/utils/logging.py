@@ -1,4 +1,4 @@
-"""Logging configuration helpers."""
+"""Ayudas de configuración de logging."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import logging
 
 
 def configure_logging(level: int = logging.INFO) -> None:
-    """Configure root logger."""
+    """Configura el logger raíz."""
 
     logging.basicConfig(
         level=level,

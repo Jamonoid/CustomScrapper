@@ -1,4 +1,4 @@
-"""Database configuration and helper functions."""
+"""Configuración de base de datos y funciones auxiliares."""
 
 from __future__ import annotations
 
@@ -25,19 +25,19 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
 
 def init_db() -> None:
-    """Create database tables."""
+    """Crea las tablas de base de datos."""
 
     Base.metadata.create_all(bind=engine)
 
 
 def get_session() -> Session:
-    """Provide a SQLAlchemy session."""
+    """Provee una sesión de SQLAlchemy."""
 
     return SessionLocal()
 
 
 def _listing_recency_filter(mode: str, frequency_minutes: int, last_own: Optional[datetime], last_comp: Optional[datetime]) -> bool:
-    """Determine whether a listing should run based on last snapshot timestamps."""
+    """Determina si un listing debe ejecutarse según los últimos snapshots."""
 
     now = datetime.utcnow()
     threshold = now - timedelta(minutes=frequency_minutes)
@@ -46,12 +46,12 @@ def _listing_recency_filter(mode: str, frequency_minutes: int, last_own: Optiona
         return last_own is None or last_own <= threshold
     if mode == "competitor":
         return last_comp is None or last_comp <= threshold
-    # mode == "both"
+    # modo == "both"
     return (last_own is None or last_own <= threshold) or (last_comp is None or last_comp <= threshold)
 
 
 def get_listings_to_monitor(session: Session, channel_name: str, mode: str) -> List[Listing]:
-    """Return listings to monitor for a channel honoring frequency constraints."""
+    """Devuelve listings a monitorear para un canal respetando la frecuencia."""
 
     if mode not in {"own", "competitor", "both"}:
         raise ValueError("mode must be one of 'own', 'competitor', or 'both'")
@@ -103,7 +103,7 @@ def insert_own_snapshot(
     moneda: str = "CLP",
     raw_source: Optional[dict] = None,
 ) -> OwnPriceSnapshot:
-    """Insert an own price snapshot."""
+    """Inserta un snapshot de precio propio."""
 
     snapshot = OwnPriceSnapshot(
         listing_id=listing_id,
@@ -126,7 +126,7 @@ def insert_competitor_snapshot(
     stock: Optional[int] = None,
     extra: Optional[dict] = None,
 ) -> CompetitorPriceSnapshot:
-    """Insert a competitor price snapshot."""
+    """Inserta un snapshot de precio de competidor."""
 
     snapshot = CompetitorPriceSnapshot(
         listing_id=listing_id,
@@ -148,7 +148,7 @@ def insert_alert(
     detalle: str,
     resuelta: bool = False,
 ) -> Alert:
-    """Insert an alert record."""
+    """Inserta un registro de alerta."""
 
     alert = Alert(
         listing_id=listing_id,

@@ -1,4 +1,4 @@
-"""Application settings and configuration loading."""
+"""Configuración de la aplicación y carga de ajustes."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import yaml
 
 @dataclass
 class Settings:
-    """Holds runtime settings loaded from environment and YAML."""
+    """Contiene los ajustes de ejecución cargados desde entorno y YAML."""
 
     database_dsn: str
     channels_config: Dict[str, Any]
@@ -21,7 +21,7 @@ class Settings:
 
 
 def load_yaml_config(path: Path) -> Dict[str, Any]:
-    """Load YAML configuration for channels."""
+    """Carga la configuración YAML para los canales."""
 
     with path.open("r", encoding="utf-8") as file:
         data: Dict[str, Any] = yaml.safe_load(file) or {}
@@ -29,7 +29,7 @@ def load_yaml_config(path: Path) -> Dict[str, Any]:
 
 
 def get_settings(config_path: Optional[Path] = None) -> Settings:
-    """Read environment variables and YAML configuration."""
+    """Lee variables de entorno y configuración YAML."""
 
     base_path = config_path or Path(__file__).resolve().parents[1] / "config" / "channels.yaml"
     config_data = load_yaml_config(base_path)

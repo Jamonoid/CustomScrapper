@@ -1,4 +1,4 @@
-"""Worker for Falabella marketplace."""
+"""Worker para el marketplace Falabella."""
 
 from __future__ import annotations
 
@@ -12,23 +12,23 @@ from .base import BaseWorker
 
 
 class FalabellaWorker(BaseWorker):
-    """Collects own and competitor prices for Falabella listings."""
+    """Recolecta precios propios y de competidores para listings de Falabella."""
 
     def fetch_own_prices(self, listings: List[Listing]) -> None:
         """
-        Fetch own prices using Falabella's API.
+        Obtiene precios propios usando la API de Falabella.
 
-        This method should:
-        - Build auth headers using environment variables defined in YAML env_keys.
-        - Call the listing or price endpoint and parse price/stock.
-        - Persist the snapshot via insert_own_snapshot.
+        Este método debe:
+        - Construir headers de autenticación usando variables de entorno definidas en YAML env_keys.
+        - Llamar al endpoint de listings o precios y parsear precio/stock.
+        - Persistir el snapshot vía insert_own_snapshot.
         """
 
         api_cfg = self.channel_config.get("api", {})
         base_url = api_cfg.get("base_url", "")
         headers = {
             "User-Agent": api_cfg.get("user_agent", "price-monitor/1.0"),
-            # TODO: Inject authorization using env credentials.
+            # TODO: Inyectar autorización usando credenciales del entorno.
         }
 
         for listing in listings:
@@ -47,13 +47,13 @@ class FalabellaWorker(BaseWorker):
 
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
         """
-        Scrape competitor offers from Falabella PDPs using Playwright.
+        Extrae ofertas de competidores desde PDPs de Falabella usando Playwright.
 
-        Steps to implement:
-        - Open PDP URL.
-        - Wait for price and offers block selectors (from YAML scraping config).
-        - Extract main price and competitor offers if applicable.
-        - Persist with insert_competitor_snapshot for each competitor found.
+        Pasos a implementar:
+        - Abrir la URL del PDP.
+        - Esperar los selectores de precio y bloque de ofertas (desde la config YAML de scraping).
+        - Extraer precio principal y ofertas de competidores si aplica.
+        - Persistir con insert_competitor_snapshot por cada competidor encontrado.
         """
 
         scraping_cfg = self.channel_config.get("scraping", {})
@@ -71,8 +71,8 @@ class FalabellaWorker(BaseWorker):
                     wait_selector=selector_price,
                     timeout_ms=scraping_cfg.get("timeout_ms", 30000),
                 )
-                # TODO: Parse `content` with BeautifulSoup or playwright queries.
-                price = 0  # placeholder
+                # TODO: Parsear `content` con BeautifulSoup o consultas de Playwright.
+                price = 0  # marcador de posición
                 insert_competitor_snapshot(
                     self.db_session,
                     listing_id=listing.id,
