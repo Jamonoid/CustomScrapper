@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import List
 
-from app.db import insert_competitor_snapshot, insert_own_snapshot
-from app.models import Listing
+from app.db import insert_competitor_snapshot_v2, insert_own_snapshot_v2
+from app.models import WatchItem
 from app.utils.http import PlaywrightClient, parse_price_clp
 from .base import BaseWorker
 
@@ -14,7 +14,7 @@ from .base import BaseWorker
 class ParisWorker(BaseWorker):
     """Recolecta precios propios por exportación y precios de competidores scrapeados."""
 
-    def fetch_own_prices(self, listings: List[Listing]) -> None:
+    def fetch_own_prices(self, watchitems: List[WatchItem]) -> None:
         """
         Marcador de posición para scraping de precios propios desde el PDP.
 
@@ -41,11 +41,13 @@ class ParisWorker(BaseWorker):
             )
             await client.start()
             try:
-                for listing in listings:
-                    if not listing.url_pdp:
+                for watchitem in watchitems:
+                    if watchitem.role != "own":
+                        continue
+                    if not watchitem.url:
                         continue
                     content = await client.get_content(
-                        listing.url_pdp,
+                        watchitem.url,
                         wait_selector=selector_price,
                         timeout_ms=self._get_timeout_ms(),
                     )
@@ -56,9 +58,11 @@ class ParisWorker(BaseWorker):
                     if selector_stock:
                         # TODO: extraer stock usando selector_stock desde el HTML.
                         stock = None
-                    insert_own_snapshot(
+                    insert_own_snapshot_v2(
                         self.db_session,
-                        listing_id=listing.id,
+                        group_id=watchitem.group_id,
+                        channel=watchitem.channel,
+                        url=watchitem.url,
                         precio=price,
                         stock=stock,
                         raw_source={"raw_html_excerpt": content[:500]},
@@ -68,7 +72,7 @@ class ParisWorker(BaseWorker):
 
         asyncio.run(_run_scrape())
 
-    def fetch_competitor_prices(self, listings: List[Listing]) -> None:
+    def fetch_competitor_prices(self, watchitems: List[WatchItem]) -> None:
         """Extrae precios de competidores para listings de Paris."""
 
         scraping_cfg = self.channel_config.get("scraping", {})
@@ -86,21 +90,25 @@ class ParisWorker(BaseWorker):
             )
             await client.start()
             try:
-                for listing in listings:
-                    if not listing.url_pdp:
+                for watchitem in watchitems:
+                    if watchitem.role != "competitor":
+                        continue
+                    if not watchitem.url:
                         continue
                     content = await client.get_content(
-                        listing.url_pdp,
+                        watchitem.url,
                         wait_selector=selector_price,
                         timeout_ms=self._get_timeout_ms(),
                     )
                     # TODO: parsear ofertas/sellers si existen.
                     price_text = ""
                     price = parse_price_clp(price_text) or 0.0
-                    insert_competitor_snapshot(
+                    insert_competitor_snapshot_v2(
                         self.db_session,
-                        listing_id=listing.id,
-                        competitor_name="paris",
+                        group_id=watchitem.group_id,
+                        channel=watchitem.channel,
+                        url=watchitem.url,
+                        competitor_name=watchitem.competitor_name or "paris",
                         precio=price,
                         stock=None,
                         extra={"raw_html_excerpt": content[:500]},
