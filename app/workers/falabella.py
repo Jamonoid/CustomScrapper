@@ -7,7 +7,7 @@ from typing import List
 
 from app.db import insert_competitor_snapshot, insert_own_snapshot
 from app.models import Listing
-from app.utils.http import PlaywrightClient, request_with_retries
+from app.utils.http import PlaywrightClient, parse_price_clp
 from .base import BaseWorker
 
 
@@ -16,34 +16,57 @@ class FalabellaWorker(BaseWorker):
 
     def fetch_own_prices(self, listings: List[Listing]) -> None:
         """
-        Obtiene precios propios usando la API de Falabella.
+        Obtiene precios propios usando scraping del PDP.
 
-        Este método debe:
-        - Construir headers de autenticación usando variables de entorno definidas en YAML env_keys.
-        - Llamar al endpoint de listings o precios y parsear precio/stock.
+        Pasos esperados:
+        - Abrir la URL del PDP.
+        - Esperar el selector de precio configurado en YAML.
+        - Parsear precio/stock desde el HTML (TODO).
         - Persistir el snapshot vía insert_own_snapshot.
         """
 
-        api_cfg = self.channel_config.get("api", {})
-        base_url = api_cfg.get("base_url", "")
-        headers = {
-            "User-Agent": api_cfg.get("user_agent", "price-monitor/1.0"),
-            # TODO: Inyectar autorización usando credenciales del entorno.
-        }
+        scraping_cfg = self.channel_config.get("scraping", {})
+        selector_price = scraping_cfg.get("selector_price")
+        selector_stock = scraping_cfg.get("selector_stock")
+        throttling = self._get_throttling() or (0.0, 0.0)
+        viewport = scraping_cfg.get("viewport")
 
-        for listing in listings:
-            url = f"{base_url}/listings/{listing.listing_id}"
-            response = request_with_retries("GET", url, headers=headers)
-            data = response.json()
-            price = data.get("price")
-            stock = data.get("stock")
-            insert_own_snapshot(
-                self.db_session,
-                listing_id=listing.id,
-                precio=price,
-                stock=stock,
-                raw_source=data,
+        async def _run_scrape() -> None:
+            client = PlaywrightClient(
+                user_agent=self._get_user_agent(),
+                headless=self._get_headless(),
+                min_delay=throttling[0],
+                max_delay=throttling[1],
+                viewport=viewport,
             )
+            await client.start()
+            try:
+                for listing in listings:
+                    if not listing.url_pdp:
+                        continue
+                    content = await client.get_content(
+                        listing.url_pdp,
+                        wait_selector=selector_price,
+                        timeout_ms=self._get_timeout_ms(),
+                    )
+                    # TODO: extraer texto de precio con selector_price desde el HTML.
+                    price_text = ""
+                    price = parse_price_clp(price_text) or 0.0
+                    stock = None
+                    if selector_stock:
+                        # TODO: extraer stock usando selector_stock desde el HTML.
+                        stock = None
+                    insert_own_snapshot(
+                        self.db_session,
+                        listing_id=listing.id,
+                        precio=price,
+                        stock=stock,
+                        raw_source={"raw_html_excerpt": content[:500]},
+                    )
+            finally:
+                await client.stop()
+
+        asyncio.run(_run_scrape())
 
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
         """
@@ -79,8 +102,9 @@ class FalabellaWorker(BaseWorker):
                         wait_selector=selector_price,
                         timeout_ms=self._get_timeout_ms(),
                     )
-                    # TODO: Parsear `content` con BeautifulSoup o consultas de Playwright.
-                    price = 0  # marcador de posición
+                    # TODO: parsear `content` y extraer ofertas/sellers si existen.
+                    price_text = ""
+                    price = parse_price_clp(price_text) or 0.0
                     insert_competitor_snapshot(
                         self.db_session,
                         listing_id=listing.id,

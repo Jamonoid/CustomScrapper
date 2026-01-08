@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import re
 import time
 from typing import Any, Dict, Optional
 
@@ -56,6 +57,22 @@ def request_with_retries(
             time.sleep(sleep_time)
 
     raise RuntimeError("Unhandled retry state")
+
+
+def parse_price_clp(text: str) -> Optional[float]:
+    """Intenta parsear un precio CLP desde un texto libre."""
+
+    if not text:
+        return None
+
+    normalized = re.sub(r"(?i)\b(clp|desde)\b", " ", text)
+    match = re.search(r"\d[\d\.\s]*", normalized)
+    if not match:
+        return None
+    digits = re.sub(r"[^\d]", "", match.group(0))
+    if not digits:
+        return None
+    return float(digits)
 
 
 class PlaywrightClient:
@@ -150,28 +167,3 @@ class PlaywrightClient:
         wait_time = random.uniform(self.min_delay, max_delay)
         if wait_time > 0:
             await asyncio.sleep(wait_time)
-
-
-async def fetch_page_content(
-    url: str,
-    *,
-    user_agent: Optional[str] = None,
-    wait_selector: Optional[str] = None,
-    timeout_ms: int = 30000,
-    headless: bool = True,
-    min_delay: float = 0.0,
-    max_delay: float = 0.0,
-) -> str:
-    """Obtiene el contenido de una página creando un cliente temporal."""
-
-    client = PlaywrightClient(
-        user_agent=user_agent,
-        headless=headless,
-        min_delay=min_delay,
-        max_delay=max_delay,
-    )
-    await client.start()
-    try:
-        return await client.get_content(url, wait_selector=wait_selector, timeout_ms=timeout_ms)
-    finally:
-        await client.stop()
