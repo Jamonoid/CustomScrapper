@@ -1,4 +1,4 @@
-"""Alert generation logic based on pricing rules."""
+"""Lógica de generación de alertas basada en reglas de precios."""
 
 from __future__ import annotations
 
@@ -50,10 +50,10 @@ def _latest_competitor_prices(session: Session, listing_id: int) -> Tuple[Option
 
 def process_new_snapshots(session: Session) -> List[str]:
     """
-    Generate alerts comparing own vs competitor latest prices.
+    Genera alertas comparando precios propios vs los últimos precios de competidores.
 
-    If own price is >10% higher than the minimum competitor price for the same
-    listing in the latest run, create an alert with type 'gap_mayor_10'.
+    Si el precio propio es >10% mayor que el precio mínimo de competidor para el mismo
+    listing en la última ejecución, crea una alerta con tipo 'gap_mayor_10'.
     """
 
     alerts_created: List[str] = []

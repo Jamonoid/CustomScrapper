@@ -1,4 +1,4 @@
-"""Worker for Ripley marketplace."""
+"""Worker para el marketplace Ripley."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ from .base import BaseWorker
 
 
 class RipleyWorker(BaseWorker):
-    """Collects own and competitor prices for Ripley listings."""
+    """Recolecta precios propios y de competidores para listings de Ripley."""
 
     def fetch_own_prices(self, listings: List[Listing]) -> None:
-        """Placeholder for Ripley API calls to fetch own prices."""
+        """Marcador de posición para llamadas a la API de Ripley para precios propios."""
 
         api_cfg = self.channel_config.get("api", {})
         base_url = api_cfg.get("base_url", "")
@@ -34,7 +34,7 @@ class RipleyWorker(BaseWorker):
             )
 
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
-        """Placeholder for Ripley scraping logic using Playwright."""
+        """Marcador de posición para scraping de Ripley usando Playwright."""
 
         scraping_cfg = self.channel_config.get("scraping", {})
         selector_price = scraping_cfg.get("selector_price")
@@ -52,7 +52,7 @@ class RipleyWorker(BaseWorker):
                     self.db_session,
                     listing_id=listing.id,
                     competitor_name="ripley",
-                    precio=0,  # TODO: parse from HTML.
+                    precio=0,  # TODO: parsear desde el HTML.
                     stock=None,
                     extra={"raw_html_excerpt": content[:500]},
                 )

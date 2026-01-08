@@ -1,4 +1,4 @@
-"""CLI entrypoint for price monitoring."""
+"""Punto de entrada CLI para el monitoreo de precios."""
 
 from __future__ import annotations
 
@@ -10,14 +10,12 @@ from app import db
 from app.rules.alerts import process_new_snapshots
 from app.settings import get_settings
 from app.utils.logging import configure_logging
-from app.workers import (
-    BaseWorker,
-    FalabellaWorker,
-    ParisWorker,
-    ProchefWorker,
-    RipleyWorker,
-    WalmartWorker,
-)
+from app.workers.base import BaseWorker
+from app.workers.falabella import FalabellaWorker
+from app.workers.paris import ParisWorker
+from app.workers.prochef import ProchefWorker
+from app.workers.ripley import RipleyWorker
+from app.workers.walmart import WalmartWorker
 
 
 WORKER_MAP: Dict[str, Type[BaseWorker]] = {
@@ -30,7 +28,7 @@ WORKER_MAP: Dict[str, Type[BaseWorker]] = {
 
 
 def build_worker(channel: str, session, settings) -> BaseWorker:
-    """Instantiate a worker for the given channel."""
+    """Instancia un worker para el canal indicado."""
 
     worker_cls = WORKER_MAP.get(channel)
     if not worker_cls:

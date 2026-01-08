@@ -1,4 +1,4 @@
-"""Worker for Prochef first-party site."""
+"""Worker para el sitio propio de Prochef."""
 
 from __future__ import annotations
 
@@ -11,14 +11,14 @@ from .base import BaseWorker
 
 
 class ProchefWorker(BaseWorker):
-    """Handles Prochef own site monitoring."""
+    """Gestiona el monitoreo del sitio propio de Prochef."""
 
     def fetch_own_prices(self, listings: List[Listing]) -> None:
         """
-        Fetch own prices for Prochef's direct channel.
+        Obtiene precios propios para el canal directo de Prochef.
 
-        Expected to call internal APIs (e.g., authenticated) and parse price/stock.
-        Credentials should be provided via environment variables referenced in YAML.
+        Se espera llamar a APIs internas (p. ej., autenticadas) y parsear precio/stock.
+        Las credenciales deben proveerse vía variables de entorno referenciadas en YAML.
         """
 
         api_config = self.channel_config.get("api", {})
@@ -26,7 +26,7 @@ class ProchefWorker(BaseWorker):
         headers = {"User-Agent": api_config.get("user_agent", "price-monitor/1.0")}
 
         for listing in listings:
-            # TODO: Replace with real endpoint and authentication strategy.
+            # TODO: Reemplazar con el endpoint real y la estrategia de autenticación.
             url = f"{base_url}/listings/{listing.listing_id}"
             response = request_with_retries("GET", url, headers=headers)
             data = response.json()
@@ -41,7 +41,7 @@ class ProchefWorker(BaseWorker):
             )
 
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
-        """Prochef has no competitor mode for this worker."""
+        """Prochef no tiene modo de competidores para este worker."""
 
-        # No competitor monitoring on own channel; nothing to do.
+        # No se monitorean competidores en el canal propio; no hay nada que hacer.
         return

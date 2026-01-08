@@ -1,4 +1,4 @@
-"""Worker for Paris marketplace."""
+"""Worker para el marketplace Paris."""
 
 from __future__ import annotations
 
@@ -12,28 +12,28 @@ from .base import BaseWorker
 
 
 class ParisWorker(BaseWorker):
-    """Collects export-based own prices and scraped competitor prices."""
+    """Recolecta precios propios por exportación y precios de competidores scrapeados."""
 
     def fetch_own_prices(self, listings: List[Listing]) -> None:
         """
-        Placeholder for Paris export ingestion.
+        Marcador de posición para la ingesta de exportaciones de Paris.
 
-        Expected steps:
-        - Download/ingest a CSV or feed delivered via Paris.
-        - Map SKUs to listings.
-        - Persist price snapshots.
+        Pasos esperados:
+        - Descargar/ingerir un CSV o feed entregado por Paris.
+        - Mapear SKUs a listings.
+        - Persistir snapshots de precio.
         """
 
         for listing in listings:
             insert_own_snapshot(
                 self.db_session,
                 listing_id=listing.id,
-                precio=0,  # TODO: parse from export file.
+                precio=0,  # TODO: parsear desde el archivo de exportación.
                 stock=None,
             )
 
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
-        """Scrape competitor prices for Paris listings."""
+        """Extrae precios de competidores para listings de Paris."""
 
         scraping_cfg = self.channel_config.get("scraping", {})
         selector_price = scraping_cfg.get("selector_price")
@@ -51,7 +51,7 @@ class ParisWorker(BaseWorker):
                     self.db_session,
                     listing_id=listing.id,
                     competitor_name="paris",
-                    precio=0,  # TODO: parse from HTML.
+                    precio=0,  # TODO: parsear desde el HTML.
                     stock=None,
                     extra={"raw_html_excerpt": content[:500]},
                 )
