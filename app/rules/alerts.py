@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
@@ -9,7 +10,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.db import insert_alert
-from app.models import CompetitorPriceSnapshot, Listing, OwnPriceSnapshot
+from app.models import Alert, CompetitorPriceSnapshot, Listing, OwnPriceSnapshot
 
 
 def _latest_own_snapshot(session: Session, listing_id: int) -> Optional[OwnPriceSnapshot]:
@@ -23,7 +24,9 @@ def _latest_own_snapshot(session: Session, listing_id: int) -> Optional[OwnPrice
     return result
 
 
-def _latest_competitor_prices(session: Session, listing_id: int) -> Tuple[Optional[CompetitorPriceSnapshot], Optional[Decimal]]:
+def _latest_competitor_prices(
+    session: Session, listing_id: int
+) -> Tuple[Optional[CompetitorPriceSnapshot], Optional[Decimal]]:
     latest_ts_stmt = (
         select(CompetitorPriceSnapshot.timestamp)
         .where(CompetitorPriceSnapshot.listing_id == listing_id)
@@ -48,6 +51,30 @@ def _latest_competitor_prices(session: Session, listing_id: int) -> Tuple[Option
     return snapshots[0], min_price
 
 
+def _latest_open_alert(
+    session: Session,
+    *,
+    listing_id: int,
+    tipo: str,
+    recent_hours: int = 24,
+) -> Optional[Alert]:
+    """Busca la alerta abierta más reciente para evitar duplicados."""
+
+    cutoff = datetime.utcnow() - timedelta(hours=recent_hours)
+    stmt = (
+        select(Alert)
+        .where(
+            Alert.listing_id == listing_id,
+            Alert.tipo == tipo,
+            Alert.resuelta.is_(False),
+            Alert.timestamp >= cutoff,
+        )
+        .order_by(desc(Alert.timestamp))
+        .limit(1)
+    )
+    return session.execute(stmt).scalar_one_or_none()
+
+
 def process_new_snapshots(session: Session) -> List[str]:
     """
     Genera alertas comparando precios propios vs los últimos precios de competidores.
@@ -64,6 +91,8 @@ def process_new_snapshots(session: Session) -> List[str]:
         competitor_snapshot, min_comp_price = _latest_competitor_prices(session, listing.id)
         if not own_snapshot or min_comp_price is None:
             continue
+        if not competitor_snapshot:
+            continue
 
         own_price = Decimal(str(own_snapshot.precio))
         if min_comp_price == 0:
@@ -71,6 +100,8 @@ def process_new_snapshots(session: Session) -> List[str]:
 
         gap = (own_price - min_comp_price) / min_comp_price
         if gap > Decimal("0.10"):
+            if _latest_open_alert(session, listing_id=listing.id, tipo="gap_mayor_10"):
+                continue
             detalle = (
                 f"Listing {listing.id} own price {own_price} vs min competitor {min_comp_price} "
                 f"gap {gap:.2%}"
