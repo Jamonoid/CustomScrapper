@@ -46,3 +46,17 @@ class BaseWorker(ABC):
         if max_delay is None:
             max_delay = min_delay
         return float(min_delay), float(max_delay)
+
+    def _get_headless(self) -> bool:
+        """Obtiene si el navegador debe ejecutarse en modo headless."""
+
+        scraping_cfg = self.channel_config.get("scraping", {})
+        return bool(scraping_cfg.get("headless", True))
+
+    def _get_timeout_ms(self) -> int:
+        """Obtiene el timeout configurado para scraping en milisegundos."""
+
+        if "timeout_ms" in self.channel_config:
+            return int(self.channel_config.get("timeout_ms", 30000))
+        scraping_cfg = self.channel_config.get("scraping", {})
+        return int(scraping_cfg.get("timeout_ms", 30000))

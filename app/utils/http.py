@@ -152,26 +152,26 @@ class PlaywrightClient:
             await asyncio.sleep(wait_time)
 
 
-_shared_clients: Dict[Optional[str], PlaywrightClient] = {}
-
-
-async def _get_shared_client(user_agent: Optional[str]) -> PlaywrightClient:
-    client = _shared_clients.get(user_agent)
-    if not client:
-        client = PlaywrightClient(user_agent=user_agent)
-        _shared_clients[user_agent] = client
-    await client.start()
-    return client
-
-
 async def fetch_page_content(
     url: str,
     *,
     user_agent: Optional[str] = None,
     wait_selector: Optional[str] = None,
     timeout_ms: int = 30000,
+    headless: bool = True,
+    min_delay: float = 0.0,
+    max_delay: float = 0.0,
 ) -> str:
-    """Obtiene el contenido de una página con un navegador reutilizable."""
+    """Obtiene el contenido de una página creando un cliente temporal."""
 
-    client = await _get_shared_client(user_agent)
-    return await client.get_content(url, wait_selector=wait_selector, timeout_ms=timeout_ms)
+    client = PlaywrightClient(
+        user_agent=user_agent,
+        headless=headless,
+        min_delay=min_delay,
+        max_delay=max_delay,
+    )
+    await client.start()
+    try:
+        return await client.get_content(url, wait_selector=wait_selector, timeout_ms=timeout_ms)
+    finally:
+        await client.stop()
