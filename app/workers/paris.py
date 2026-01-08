@@ -43,7 +43,7 @@ class ParisWorker(BaseWorker):
         async def _run_scrape() -> None:
             client = PlaywrightClient(
                 user_agent=self._get_user_agent(),
-                headless=bool(self.channel_config.get("headless", True)),
+                headless=self._get_headless(),
                 min_delay=throttling[0],
                 max_delay=throttling[1],
                 viewport=viewport,
@@ -56,7 +56,7 @@ class ParisWorker(BaseWorker):
                     content = await client.get_content(
                         listing.url_pdp,
                         wait_selector=selector_price,
-                        timeout_ms=scraping_cfg.get("timeout_ms", 30000),
+                        timeout_ms=self._get_timeout_ms(),
                     )
                     insert_competitor_snapshot(
                         self.db_session,

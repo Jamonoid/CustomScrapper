@@ -68,6 +68,7 @@ def main() -> None:
 
         session.commit()
         alerts = process_new_snapshots(session)
+        session.commit()
         logging.info("Generated %s alerts", len(alerts))
     finally:
         session.close()

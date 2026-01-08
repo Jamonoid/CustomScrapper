@@ -109,5 +109,4 @@ def process_new_snapshots(session: Session) -> List[str]:
             insert_alert(session, listing_id=listing.id, tipo="gap_mayor_10", detalle=detalle)
             alerts_created.append(detalle)
 
-    session.commit()
     return alerts_created
