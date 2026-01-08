@@ -7,7 +7,7 @@ from typing import List
 
 from app.db import insert_competitor_snapshot, insert_own_snapshot
 from app.models import Listing
-from app.utils.http import fetch_page_content, request_with_retries
+from app.utils.http import PlaywrightClient, request_with_retries
 from .base import BaseWorker
 
 
@@ -58,29 +58,38 @@ class FalabellaWorker(BaseWorker):
 
         scraping_cfg = self.channel_config.get("scraping", {})
         selector_price = scraping_cfg.get("selector_price")
-        min_delay = scraping_cfg.get("throttling", {}).get("min_delay", 1)
-        max_delay = scraping_cfg.get("throttling", {}).get("max_delay", 3)
+        throttling = self._get_throttling() or (0.0, 0.0)
+        viewport = scraping_cfg.get("viewport")
 
         async def _run_scrape() -> None:
-            for listing in listings:
-                if not listing.url_pdp:
-                    continue
-                content = await fetch_page_content(
-                    listing.url_pdp,
-                    user_agent=self.channel_config.get("user_agent"),
-                    wait_selector=selector_price,
-                    timeout_ms=scraping_cfg.get("timeout_ms", 30000),
-                )
-                # TODO: Parsear `content` con BeautifulSoup o consultas de Playwright.
-                price = 0  # marcador de posición
-                insert_competitor_snapshot(
-                    self.db_session,
-                    listing_id=listing.id,
-                    competitor_name="falabella",
-                    precio=price,
-                    stock=None,
-                    extra={"raw_html_excerpt": content[:500]},
-                )
-                await asyncio.sleep(min_delay)
+            client = PlaywrightClient(
+                user_agent=self._get_user_agent(),
+                headless=bool(self.channel_config.get("headless", True)),
+                min_delay=throttling[0],
+                max_delay=throttling[1],
+                viewport=viewport,
+            )
+            await client.start()
+            try:
+                for listing in listings:
+                    if not listing.url_pdp:
+                        continue
+                    content = await client.get_content(
+                        listing.url_pdp,
+                        wait_selector=selector_price,
+                        timeout_ms=scraping_cfg.get("timeout_ms", 30000),
+                    )
+                    # TODO: Parsear `content` con BeautifulSoup o consultas de Playwright.
+                    price = 0  # marcador de posición
+                    insert_competitor_snapshot(
+                        self.db_session,
+                        listing_id=listing.id,
+                        competitor_name="falabella",
+                        precio=price,
+                        stock=None,
+                        extra={"raw_html_excerpt": content[:500]},
+                    )
+            finally:
+                await client.stop()
 
         asyncio.run(_run_scrape())

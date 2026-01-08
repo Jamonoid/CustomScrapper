@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -25,3 +25,24 @@ class BaseWorker(ABC):
     @abstractmethod
     def fetch_competitor_prices(self, listings: List[Listing]) -> None:
         """Recolecta precios de competidores para los listings indicados."""
+
+    def _get_user_agent(self) -> Optional[str]:
+        """Obtiene el user agent configurado para el canal."""
+
+        return self.channel_config.get("user_agent")
+
+    def _get_throttling(self) -> Optional[Tuple[float, float]]:
+        """Devuelve throttling (min_delay, max_delay) si está configurado."""
+
+        scraping_cfg = self.channel_config.get("scraping", {})
+        throttling = scraping_cfg.get("throttling", {})
+        min_delay = throttling.get("min_delay")
+        max_delay = throttling.get("max_delay")
+
+        if min_delay is None and max_delay is None:
+            return None
+        if min_delay is None:
+            min_delay = 0.0
+        if max_delay is None:
+            max_delay = min_delay
+        return float(min_delay), float(max_delay)
