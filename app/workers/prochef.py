@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import List
 
-from app.db import insert_own_snapshot
-from app.models import Listing
+from app.db import insert_own_snapshot_v2
+from app.models import WatchItem
 from app.utils.http import PlaywrightClient, parse_price_clp
 from .base import BaseWorker
 
@@ -14,7 +14,7 @@ from .base import BaseWorker
 class ProchefWorker(BaseWorker):
     """Gestiona el monitoreo del sitio propio de Prochef."""
 
-    def fetch_own_prices(self, listings: List[Listing]) -> None:
+    def fetch_own_prices(self, watchitems: List[WatchItem]) -> None:
         """
         Obtiene precios propios para el canal directo de Prochef.
 
@@ -37,11 +37,13 @@ class ProchefWorker(BaseWorker):
             )
             await client.start()
             try:
-                for listing in listings:
-                    if not listing.url_pdp:
+                for watchitem in watchitems:
+                    if watchitem.role != "own":
+                        continue
+                    if not watchitem.url:
                         continue
                     content = await client.get_content(
-                        listing.url_pdp,
+                        watchitem.url,
                         wait_selector=selector_price,
                         timeout_ms=self._get_timeout_ms(),
                     )
@@ -52,9 +54,11 @@ class ProchefWorker(BaseWorker):
                     if selector_stock:
                         # TODO: extraer stock usando selector_stock desde el HTML.
                         stock = None
-                    insert_own_snapshot(
+                    insert_own_snapshot_v2(
                         self.db_session,
-                        listing_id=listing.id,
+                        group_id=watchitem.group_id,
+                        channel=watchitem.channel,
+                        url=watchitem.url,
                         precio=price,
                         stock=stock,
                         raw_source={"raw_html_excerpt": content[:500]},
@@ -64,7 +68,7 @@ class ProchefWorker(BaseWorker):
 
         asyncio.run(_run_scrape())
 
-    def fetch_competitor_prices(self, listings: List[Listing]) -> None:
+    def fetch_competitor_prices(self, watchitems: List[WatchItem]) -> None:
         """Prochef no tiene modo de competidores para este worker."""
 
         # No se monitorean competidores en el canal propio; no hay nada que hacer.

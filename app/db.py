@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Sequence
 
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from .models import (
     Alert,
+    AlertV2,
     Channel,
     CompetitorPriceSnapshot,
+    CompetitorPriceSnapshotV2,
     Listing,
+    OwnPriceSnapshotV2,
     OwnPriceSnapshot,
+    WatchItem,
     Base,
 )
 from .settings import get_settings
@@ -94,6 +98,101 @@ def get_listings_to_monitor(session: Session, channel_name: str, mode: str) -> L
     return filtered
 
 
+def _watchitem_recency_filter(frequency_minutes: int, last_seen: Optional[datetime]) -> bool:
+    """Determina si un watchitem debe ejecutarse según el último snapshot."""
+
+    now = datetime.utcnow()
+    threshold = now - timedelta(minutes=frequency_minutes)
+    return last_seen is None or last_seen <= threshold
+
+
+def _latest_watchitem_snapshot_ts(session: Session, watchitem: WatchItem) -> Optional[datetime]:
+    """Obtiene el último timestamp asociado a un watchitem."""
+
+    if watchitem.role == "own":
+        stmt = select(func.max(OwnPriceSnapshotV2.timestamp)).where(
+            OwnPriceSnapshotV2.group_id == watchitem.group_id,
+            OwnPriceSnapshotV2.channel == watchitem.channel,
+            OwnPriceSnapshotV2.url == watchitem.url,
+        )
+    else:
+        stmt = select(func.max(CompetitorPriceSnapshotV2.timestamp)).where(
+            CompetitorPriceSnapshotV2.group_id == watchitem.group_id,
+            CompetitorPriceSnapshotV2.channel == watchitem.channel,
+            CompetitorPriceSnapshotV2.url == watchitem.url,
+        )
+    return session.execute(stmt).scalar_one_or_none()
+
+
+def get_watchitems_to_monitor(session: Session, channel_name: str, mode: str) -> List[WatchItem]:
+    """Devuelve watchitems activos a monitorear respetando la frecuencia."""
+
+    if mode not in {"own", "competitor", "both"}:
+        raise ValueError("mode must be one of 'own', 'competitor', or 'both'")
+
+    stmt = select(WatchItem).where(WatchItem.channel == channel_name, WatchItem.activo.is_(True))
+    if mode == "own":
+        stmt = stmt.where(WatchItem.role == "own")
+    elif mode == "competitor":
+        stmt = stmt.where(WatchItem.role == "competitor")
+
+    watchitems = session.execute(stmt).scalars().all()
+    filtered: List[WatchItem] = []
+    for watchitem in watchitems:
+        last_seen = _latest_watchitem_snapshot_ts(session, watchitem)
+        if _watchitem_recency_filter(watchitem.frecuencia_minutos, last_seen):
+            filtered.append(watchitem)
+    return filtered
+
+
+def filter_watchitems_by_frequency(
+    session: Session,
+    watchitems: Sequence[WatchItem],
+    mode: str,
+) -> List[WatchItem]:
+    """Filtra watchitems en memoria aplicando la frecuencia definida por fila."""
+
+    if mode not in {"own", "competitor", "both"}:
+        raise ValueError("mode must be one of 'own', 'competitor', or 'both'")
+
+    filtered: List[WatchItem] = []
+    for watchitem in watchitems:
+        if mode == "own" and watchitem.role != "own":
+            continue
+        if mode == "competitor" and watchitem.role != "competitor":
+            continue
+        last_seen = _latest_watchitem_snapshot_ts(session, watchitem)
+        if _watchitem_recency_filter(watchitem.frecuencia_minutos, last_seen):
+            filtered.append(watchitem)
+    return filtered
+
+
+def upsert_watchitems(session: Session, watchitems: Iterable[WatchItem]) -> List[WatchItem]:
+    """Inserta o actualiza watchitems basados en group_id/canal/rol/url."""
+
+    stored: List[WatchItem] = []
+    for watchitem in watchitems:
+        stmt = select(WatchItem).where(
+            WatchItem.group_id == watchitem.group_id,
+            WatchItem.channel == watchitem.channel,
+            WatchItem.role == watchitem.role,
+            WatchItem.url == watchitem.url,
+        )
+        existing = session.execute(stmt).scalar_one_or_none()
+        if existing:
+            existing.product_key = watchitem.product_key
+            existing.competitor_name = watchitem.competitor_name
+            existing.frecuencia_minutos = watchitem.frecuencia_minutos
+            existing.umbral_gap = watchitem.umbral_gap
+            existing.activo = watchitem.activo
+            stored.append(existing)
+        else:
+            session.add(watchitem)
+            stored.append(watchitem)
+    session.flush()
+    return stored
+
+
 def insert_own_snapshot(
     session: Session,
     *,
@@ -140,6 +239,60 @@ def insert_competitor_snapshot(
     return snapshot
 
 
+def insert_own_snapshot_v2(
+    session: Session,
+    *,
+    group_id: str,
+    channel: str,
+    url: str,
+    precio: float,
+    stock: Optional[int] = None,
+    moneda: str = "CLP",
+    raw_source: Optional[dict] = None,
+) -> OwnPriceSnapshotV2:
+    """Inserta un snapshot de precio propio (v2)."""
+
+    snapshot = OwnPriceSnapshotV2(
+        group_id=group_id,
+        channel=channel,
+        url=url,
+        precio=precio,
+        stock=stock,
+        moneda=moneda,
+        raw_source=raw_source,
+    )
+    session.add(snapshot)
+    session.flush()
+    return snapshot
+
+
+def insert_competitor_snapshot_v2(
+    session: Session,
+    *,
+    group_id: str,
+    channel: str,
+    url: str,
+    competitor_name: str,
+    precio: float,
+    stock: Optional[int] = None,
+    extra: Optional[dict] = None,
+) -> CompetitorPriceSnapshotV2:
+    """Inserta un snapshot de precio competidor (v2)."""
+
+    snapshot = CompetitorPriceSnapshotV2(
+        group_id=group_id,
+        channel=channel,
+        url=url,
+        competitor_name=competitor_name,
+        precio=precio,
+        stock=stock,
+        extra=extra,
+    )
+    session.add(snapshot)
+    session.flush()
+    return snapshot
+
+
 def insert_alert(
     session: Session,
     *,
@@ -155,6 +308,39 @@ def insert_alert(
         tipo=tipo,
         detalle=detalle,
         resuelta=resuelta,
+    )
+    session.add(alert)
+    session.flush()
+    return alert
+
+
+def insert_alert_v2(
+    session: Session,
+    *,
+    group_id: str,
+    channel: str,
+    tipo: str,
+    detalle: str,
+    resuelta: bool = False,
+    own_price: Optional[float] = None,
+    min_competitor_price: Optional[float] = None,
+    gap_pct: Optional[float] = None,
+    url_own: Optional[str] = None,
+    url_min_competitor: Optional[str] = None,
+) -> AlertV2:
+    """Inserta una alerta v2 por group_id."""
+
+    alert = AlertV2(
+        group_id=group_id,
+        channel=channel,
+        tipo=tipo,
+        detalle=detalle,
+        resuelta=resuelta,
+        own_price=own_price,
+        min_competitor_price=min_competitor_price,
+        gap_pct=gap_pct,
+        url_own=url_own,
+        url_min_competitor=url_min_competitor,
     )
     session.add(alert)
     session.flush()

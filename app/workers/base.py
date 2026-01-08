@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import Listing
+from app.models import WatchItem
 
 
 class BaseWorker(ABC):
@@ -19,12 +19,12 @@ class BaseWorker(ABC):
         self.db_session = db_session
 
     @abstractmethod
-    def fetch_own_prices(self, listings: List[Listing]) -> None:
-        """Recolecta precios propios para los listings indicados."""
+    def fetch_own_prices(self, watchitems: List[WatchItem]) -> None:
+        """Recolecta precios propios para los watchitems indicados."""
 
     @abstractmethod
-    def fetch_competitor_prices(self, listings: List[Listing]) -> None:
-        """Recolecta precios de competidores para los listings indicados."""
+    def fetch_competitor_prices(self, watchitems: List[WatchItem]) -> None:
+        """Recolecta precios de competidores para los watchitems indicados."""
 
     def _get_user_agent(self) -> Optional[str]:
         """Obtiene el user agent configurado para el canal."""
