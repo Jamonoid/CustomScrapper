@@ -344,3 +344,20 @@ def insert_alert_v2(
     session.add(alert)
     session.flush()
     return alert
+
+
+def get_open_alerts_v2(session: Session, *, channel: Optional[str] = None) -> List[AlertV2]:
+    """Devuelve alertas v2 abiertas, opcionalmente filtradas por canal."""
+
+    stmt = select(AlertV2).where(AlertV2.resuelta.is_(False))
+    if channel:
+        stmt = stmt.where(AlertV2.channel == channel)
+    stmt = stmt.order_by(AlertV2.timestamp.desc())
+    return session.execute(stmt).scalars().all()
+
+
+def get_alerts_v2_created_since(session: Session, since_dt: datetime) -> List[AlertV2]:
+    """Devuelve alertas v2 creadas desde la fecha indicada."""
+
+    stmt = select(AlertV2).where(AlertV2.timestamp >= since_dt).order_by(AlertV2.timestamp.desc())
+    return session.execute(stmt).scalars().all()
