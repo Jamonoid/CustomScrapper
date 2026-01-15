@@ -2,6 +2,13 @@
 
 Tabs recomendados en el Sheet (fila 1 como headers):
 
+- WATCHLIST (tab simple y amigable):
+  Columnas mínimas: sku | canal | rol | url
+  Columnas opcionales: competitor_name | frecuencia_minutos | umbral_gap | activo
+  Alias aceptados para columnas opcionales: competidor, frecuencia_min, frecuencia,
+  umbral, gap.
+  Ejemplo: ABC123 | marketplace | own | https://... | Tienda X | 60 | 0.10 | TRUE
+
 - SKUS_HEADERS (tab SKUS):
   sku | nombre | activo | categoria | marca
   Ejemplo: ABC123 | Zapatilla Pro | TRUE | Calzado | MarcaX
@@ -50,6 +57,16 @@ WATCHLIST_HEADERS = [
     "umbral_gap",
     "activo",
 ]
+WATCHLIST_HEADER_ALIASES = {
+    "competidor": "competitor_name",
+    "competidor_name": "competitor_name",
+    "competidor_nombre": "competitor_name",
+    "frecuencia": "frecuencia_minutos",
+    "frecuencia_min": "frecuencia_minutos",
+    "frecuencia_minutos": "frecuencia_minutos",
+    "umbral": "umbral_gap",
+    "gap": "umbral_gap",
+}
 
 SKUS_HEADERS = [
     "sku",
@@ -177,6 +194,15 @@ def _normalize_channel(value: Optional[str]) -> str:
     return str(value or "").strip().lower()
 
 
+def _normalize_watchlist_row(row: Dict[str, object]) -> Dict[str, object]:
+    normalized: Dict[str, object] = {}
+    for key, value in row.items():
+        normalized_key = str(key or "").strip().lower()
+        canonical_key = WATCHLIST_HEADER_ALIASES.get(normalized_key, normalized_key)
+        normalized[canonical_key] = value
+    return normalized
+
+
 def _get_client() -> gspread.Client:
     credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if not credentials_path:
@@ -213,18 +239,19 @@ def load_watchlist_from_sheet(sheet_id: str, watchlist_tab: str = "WATCHLIST") -
     watchitems: List[WatchItem] = []
 
     for row in rows:
-        sku = str(row.get("sku", "")).strip()
-        canal = str(row.get("canal", "")).strip().lower()
-        rol = str(row.get("rol", "")).strip().lower()
-        url = str(row.get("url", "")).strip()
+        normalized_row = _normalize_watchlist_row(row)
+        sku = str(normalized_row.get("sku", "")).strip()
+        canal = str(normalized_row.get("canal", "")).strip().lower()
+        rol = str(normalized_row.get("rol", "")).strip().lower()
+        url = str(normalized_row.get("url", "")).strip()
         if not sku or not canal or not rol or not url:
             continue
 
-        competitor_name = row.get("competitor_name")
+        competitor_name = normalized_row.get("competitor_name")
         competitor_value = str(competitor_name).strip() if competitor_name else None
-        frecuencia = _parse_int(row.get("frecuencia_minutos"), default=60)
-        umbral_gap = _parse_decimal(row.get("umbral_gap"), default=Decimal("0.10"))
-        activo = _parse_bool(row.get("activo"), default=True)
+        frecuencia = _parse_int(normalized_row.get("frecuencia_minutos"), default=60)
+        umbral_gap = _parse_decimal(normalized_row.get("umbral_gap"), default=Decimal("0.10"))
+        activo = _parse_bool(normalized_row.get("activo"), default=True)
 
         watchitems.append(
             WatchItem(
